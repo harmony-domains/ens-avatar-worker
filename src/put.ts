@@ -17,6 +17,9 @@ const _handleFetch =
     result: string;
     id: number;
   }> => {
+    console.log(`to: ${JSON.stringify(to)}`)
+    console.log(`data: ${JSON.stringify(data)}`)
+    console.log(`endpoint: ${endpoint}`)
     return await fetch(endpoint, {
       method: "POST",
       headers: {
@@ -51,7 +54,9 @@ export default async (
   name: string,
   network: string
 ): Promise<Response> => {
-  const handleFetch = _handleFetch(env.BASE_WEB3_ENDPOINT + "/" + network);
+    console.log('we are putting')
+//   const handleFetch = _handleFetch(env.BASE_WEB3_ENDPOINT + "/" + network);
+  const handleFetch = _handleFetch(env.BASE_WEB3_ENDPOINT);
   const { expiry, dataURL, sig } = (await request.json()) as AvatarUploadParams;
   const { mime, bytes } = dataURLToBytes(dataURL);
   const hash = sha256(bytes);
@@ -77,7 +82,7 @@ export default async (
     },
     sig
   );
-
+    console.log('have verified address')
   const maxSize = 1024 * 512;
 
   if (bytes.byteLength > maxSize) {
@@ -87,17 +92,25 @@ export default async (
   let owner: string;
   try {
     const nameHash = namehash(name);
+    console.log(`nameHash: ${nameHash}`)
+    console.log(`env.REGISTRY_ADDRESS: ${env.REGISTRY_ADDRESS}`)
     const ownerData = await handleFetch(
       env.REGISTRY_ADDRESS,
       "0x02571be3" + nameHash.substring(2)
     );
+    console.log(`ownerData: ${JSON.stringify(ownerData)}`)
     const [_owner] = defaultAbiCoder.decode(["address"], ownerData.result);
     owner = _owner;
   } catch {
+    console.log ('oh oh')
     return makeResponse(`${name} not found`, 404);
   }
+  console.log('have owner data')
 
+  console.log(`env.WRAPPER_ADDRESS: ${JSON.stringify(env.WRAPPER_ADDRESS)}`)
   const wrapperAddress = JSON.parse(env.WRAPPER_ADDRESS)[network];
+  console.log(`owner: ${owner}`)
+  console.log(`wrapperAddress: ${wrapperAddress}`)
 
   if (owner === wrapperAddress) {
     try {
@@ -127,6 +140,10 @@ export default async (
     return makeResponse(`Signature expired`, 403);
   }
 
+  console.log(`env: ${JSON.stringify(env)}`)
+  console.log(`env.AVATAR_BUCKET: ${JSON.stringify(env.AVATAR_BUCKET)}`)
+  console.log(`network; ${network}`)
+  console.log(`name: ${name}`)
   const bucket = env.AVATAR_BUCKET;
   const uploaded = await bucket.put(`${network}-${name}`, bytes, {
     httpMetadata: { contentType: mime },
